@@ -156,3 +156,17 @@ def test_trigram_index_supports_fuzzy_search(db_session, factories):
 
     addresses = [row[0] for row in result]
     assert any("OVERHILL" in a for a in addresses)
+
+
+@pytest.mark.integration
+def test_property_census_tract_indexed_and_queryable(db_session, factories):
+    from sqlalchemy import text
+    factories.Property(census_tract="146", geographic_ward="14", street_code="54280")
+    factories.Property(census_tract="146", geographic_ward="14", street_code="54280")
+    factories.Property(census_tract="999", geographic_ward="99", street_code="99999")
+    db_session.flush()
+
+    result = db_session.execute(
+        text("SELECT COUNT(*) FROM keystone.properties WHERE census_tract = '146'")
+    ).scalar()
+    assert result >= 2

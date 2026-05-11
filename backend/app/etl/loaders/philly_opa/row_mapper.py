@@ -168,6 +168,9 @@ def _build_payload(row: dict[str, str], county_id: str) -> dict[str, Any]:
         "last_sale_date": _to_date(row.get("sale_date")),
         "last_sale_price": sale_price,
         "source_id": "philly_opa",
+        "census_tract": _clean(row.get("census_tract")),
+        "geographic_ward": _clean(row.get("geographic_ward")),
+        "street_code": _clean(row.get("street_code")),
     }
 
     return payload

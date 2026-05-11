@@ -54,6 +54,9 @@ class Property(BaseModel):
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     state: Mapped[str] = mapped_column(String(2), nullable=False)
     zip_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    census_tract: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    geographic_ward: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    street_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     property_category: Mapped[PropertyCategory] = mapped_column(
             ENUM(

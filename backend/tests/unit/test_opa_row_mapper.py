@@ -281,3 +281,26 @@ def test_real_opa_row_from_sample_data():
     assert result.payload["property_category"] == "rowhouse"
     assert result.payload["last_sale_price"] == 110000
     assert result.payload["current_assessed_total"] == 139900
+
+
+
+def test_census_tract_extracted_from_raw_row(sample_row):
+    sample_row["census_tract"] = "146"
+    sample_row["geographic_ward"] = "14"
+    sample_row["street_code"] = "54280"
+    stats = MapStats()
+    result = map_row(sample_row, county_id="x", stats=stats)
+    assert result.payload["census_tract"] == "146"
+    assert result.payload["geographic_ward"] == "14"
+    assert result.payload["street_code"] == "54280"
+
+
+def test_missing_geographic_fields_are_none(sample_row):
+    sample_row["census_tract"] = ""
+    sample_row["geographic_ward"] = ""
+    sample_row["street_code"] = ""
+    stats = MapStats()
+    result = map_row(sample_row, county_id="x", stats=stats)
+    assert result.payload["census_tract"] is None
+    assert result.payload["geographic_ward"] is None
+    assert result.payload["street_code"] is None
