@@ -2,7 +2,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Integer, String, BigInteger
+from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Integer, String, BigInteger, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,5 +31,6 @@ class Sale(BaseModel):
     property: Mapped["Property"] = relationship(back_populates="sales")
 
     __table_args__ = (
-        CheckConstraint("sale_price >= 0", name="ck_sales_price_nonnegative"),
-    )
+            UniqueConstraint("source_id", "document_number", name="uq_sales_source_id_document_number"),
+            CheckConstraint("sale_price >= 0", name="ck_sales_price_nonnegative"),
+        )

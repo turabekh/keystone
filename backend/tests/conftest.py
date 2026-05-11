@@ -59,3 +59,10 @@ def clean_properties(db_session):
     db_session.execute(text("TRUNCATE keystone.properties CASCADE"))
     db_session.flush()
     return db_session
+
+@pytest.fixture
+def clean_sales(db_session):
+    from sqlalchemy import text
+    db_session.execute(text("TRUNCATE keystone.sales CASCADE"))
+    db_session.commit()
+    return db_session
