@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -174,7 +174,7 @@ def _build_payload(row: dict[str, str], county_id: str) -> dict[str, Any]:
 
 
 def _today_assessment_year() -> int:
-    return datetime.utcnow().year
+    return datetime.now(timezone.utc).year
 
 
 def map_row(row: dict[str, str], county_id: str, stats: MapStats) -> MappedProperty | None:
