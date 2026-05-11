@@ -146,8 +146,7 @@ def test_loader_raises_on_missing_county(db_session, sample_csv):
         load_philly_opa(db_session, sample_csv, county_slug="nonexistent")
 
 
-@pytest.mark.integration
-def test_loader_inserts_valid_properties(db_session, sample_csv, philly_county_id):
+def test_loader_inserts_valid_properties(db_session, sample_csv, philly_county_id, clean_properties):
     loader = PhillyOpaLoader(csv_path=sample_csv, county_id=philly_county_id)
 
     run = run_loader(db_session, loader, batch_size=10)
@@ -183,7 +182,7 @@ def test_loaded_properties_have_correct_fields(db_session, sample_csv, philly_co
 
 
 @pytest.mark.integration
-def test_idempotent_rerun_marks_unchanged(db_session, sample_csv, philly_county_id):
+def test_idempotent_rerun_marks_unchanged(db_session, sample_csv, philly_county_id, clean_properties):
     loader1 = PhillyOpaLoader(csv_path=sample_csv, county_id=philly_county_id)
     run1 = run_loader(db_session, loader1)
 
@@ -198,7 +197,7 @@ def test_idempotent_rerun_marks_unchanged(db_session, sample_csv, philly_county_
 
 
 @pytest.mark.integration
-def test_changed_data_triggers_update(db_session, sample_csv, philly_county_id, tmp_path):
+def test_changed_data_triggers_update(db_session, sample_csv, philly_county_id, clean_properties, tmp_path):
     loader1 = PhillyOpaLoader(csv_path=sample_csv, county_id=philly_county_id)
     run_loader(db_session, loader1)
 

@@ -2,7 +2,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Integer, String
+from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Integer, String, BigInteger
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,7 +17,7 @@ class Sale(BaseModel):
         nullable=False,
     )
     sale_date: Mapped[date] = mapped_column(Date, nullable=False)
-    sale_price: Mapped[int] = mapped_column(Integer, nullable=False)
+    sale_price: Mapped[int] = mapped_column(BigInteger, nullable=False)
     document_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
     deed_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     grantor: Mapped[str | None] = mapped_column(String(500), nullable=True)

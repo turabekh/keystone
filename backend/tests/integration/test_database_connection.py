@@ -5,7 +5,7 @@ import pytest
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://keystone:keystone_dev@localhost:5436/keystone",
+    "postgresql://keystone:keystone_dev@localhost:5432/keystone",
 )
 
 

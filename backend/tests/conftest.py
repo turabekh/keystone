@@ -52,3 +52,10 @@ def sample_address_strings():
         "106 OVERHILL AVENUE PHILADELPHIA PA 19116",
         "106 overhill ave philadelphia pennsylvania",
     ]
+
+@pytest.fixture
+def clean_properties(db_session):
+    from sqlalchemy import text
+    db_session.execute(text("TRUNCATE keystone.properties CASCADE"))
+    db_session.flush()
+    return db_session

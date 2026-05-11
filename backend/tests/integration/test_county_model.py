@@ -32,9 +32,9 @@ def test_county_state_length_constraint(db_session):
 
 @pytest.mark.integration
 def test_unique_state_slug(db_session, factories):
-    factories.County(state="PA", slug="chester")
+    factories.County(state="PA", slug="testcounty")
     db_session.flush()
-    db_session.add(County(name="Chester Two", state="PA", slug="chester"))
+    db_session.add(County(name="Test County Two", state="PA", slug="testcounty"))
     with pytest.raises(IntegrityError):
         db_session.flush()
 

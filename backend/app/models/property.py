@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     text,
+    BigInteger,
 )
 from sqlalchemy.dialects.postgresql import ENUM, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -68,18 +69,18 @@ class Property(BaseModel):
 
     year_built: Mapped[int | None] = mapped_column(Integer, nullable=True)
     square_feet_living: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    square_feet_lot: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    square_feet_lot: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     number_of_bedrooms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     number_of_bathrooms: Mapped[Decimal | None] = mapped_column(Numeric(4, 1), nullable=True)
     number_of_stories: Mapped[Decimal | None] = mapped_column(Numeric(3, 1), nullable=True)
 
-    current_assessed_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    current_assessed_land: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    current_assessed_building: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    current_assessed_total: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    current_assessed_land: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    current_assessed_building: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     current_assessment_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     last_sale_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    last_sale_price: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_sale_price: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     latitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7), nullable=True)
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7), nullable=True)

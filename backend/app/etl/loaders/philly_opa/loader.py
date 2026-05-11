@@ -48,6 +48,11 @@ _UPSERT_COLUMNS = (
 )
 
 
+POSTGRES_PARAM_LIMIT = 65_535
+PARAMS_PER_PROPERTY_ROW = 30
+SAFE_BATCH_LIMIT = (POSTGRES_PARAM_LIMIT // PARAMS_PER_PROPERTY_ROW) - 100
+
+
 class PhillyOpaLoader:
     source_id = "philly_opa"
 
@@ -59,8 +64,19 @@ class PhillyOpaLoader:
     def fetch(self) -> Iterator[SourceRow]:
         with self.csv_path.open("r", encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f)
-            for row in reader:
+            for raw_count, row in enumerate(reader, start=1):
                 mapped = map_row(row, self.county_id, self.stats)
+                if raw_count % 50_000 == 0:
+                    logger.info(
+                        "csv_progress",
+                        extra={
+                            "raw_rows_seen": raw_count,
+                            "mapped": self.stats.mapped,
+                            "skipped_no_market_value": self.stats.skipped_no_market_value,
+                            "skipped_city_owned": self.stats.skipped_city_owned,
+                            "skipped_no_parcel": self.stats.skipped_no_parcel,
+                        },
+                    )
                 if mapped is None:
                     continue
                 yield SourceRow(
@@ -75,9 +91,23 @@ class PhillyOpaLoader:
         if not rows:
             return UpsertResult()
 
-        values = [r.payload for r in rows]
         result = UpsertResult()
+        for sub_batch in _split_into_safe_batches(rows):
+            result += self._upsert_one(session, sub_batch)
+        return result
 
+    def _upsert_one(self, session: Session, rows: list[SourceRow]) -> UpsertResult:
+        if not rows:
+            return UpsertResult()
+
+        deduped = _deduplicate_by_natural_key(rows)
+        if len(deduped) != len(rows):
+            logger.info(
+                "deduped_batch",
+                extra={"original": len(rows), "deduped": len(deduped)},
+            )
+
+        values = [r.payload for r in deduped]
         table = Property.__table__
 
         stmt = insert(table).values(values)
@@ -90,7 +120,7 @@ class PhillyOpaLoader:
 
         written = session.execute(stmt).all()
         written_count = len(written)
-        unchanged_count = len(rows) - written_count
+        unchanged_count = len(deduped) - written_count
 
         inserted_count = sum(
             1 for row in written
@@ -98,10 +128,30 @@ class PhillyOpaLoader:
         )
         updated_count = written_count - inserted_count
 
-        result.inserted = inserted_count
-        result.updated = updated_count
-        result.unchanged = unchanged_count
-        return result
+        return UpsertResult(
+            inserted=inserted_count,
+            updated=updated_count,
+            unchanged=unchanged_count,
+        )
+
+
+def _split_into_safe_batches(rows: list[SourceRow]) -> Iterator[list[SourceRow]]:
+    if len(rows) <= SAFE_BATCH_LIMIT:
+        yield rows
+        return
+    for i in range(0, len(rows), SAFE_BATCH_LIMIT):
+        yield rows[i:i + SAFE_BATCH_LIMIT]
+
+
+def _deduplicate_by_natural_key(rows: list[SourceRow]) -> list[SourceRow]:
+    seen: set[str] = set()
+    result: list[SourceRow] = []
+    for row in rows:
+        if row.natural_key in seen:
+            continue
+        seen.add(row.natural_key)
+        result.append(row)
+    return result
 
 
 def load_philly_opa(
