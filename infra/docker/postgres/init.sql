@@ -1,0 +1,7 @@
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS btree_gin;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE SCHEMA IF NOT EXISTS keystone;
+
+ALTER DATABASE keystone SET search_path TO keystone, public;
