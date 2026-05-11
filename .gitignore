@@ -31,3 +31,5 @@ yarn-debug.log*
 postgres-data/
 *.dump
 *.sql.gz
+
+backend/var/

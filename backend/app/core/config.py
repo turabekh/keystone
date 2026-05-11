@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, PostgresDsn, computed_field
+from pydantic import Field, PostgresDsn, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     db_pool_timeout: int = Field(default=30)
     db_echo: bool = Field(default=False)
 
+    data_cache_dir: Path = Field(default=Path("var/data"))
+    http_timeout_seconds: int = Field(default=60)
+
     @computed_field
     @property
     def is_production(self) -> bool:
@@ -32,6 +35,15 @@ class Settings(BaseSettings):
     @property
     def is_test(self) -> bool:
         return self.environment == "test"
+    
+    
+    @field_validator("data_cache_dir", mode="after")
+    @classmethod
+    def _resolve_cache_dir(cls, v: Path) -> Path:
+        if v.is_absolute():
+            return v
+        backend_root = Path(__file__).resolve().parents[2]
+        return backend_root / v
 
 
 @lru_cache
