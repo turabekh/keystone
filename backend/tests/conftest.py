@@ -1,7 +1,6 @@
 from collections.abc import Generator
 
 import pytest
-from sqlalchemy import event
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal, engine
@@ -27,21 +26,29 @@ def db_session(db_engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
+def factories(db_session):
+    from tests.factories import (
+        CountyFactory,
+        CountyYearSettingFactory,
+        PropertyFactory,
+        SaleFactory,
+    )
+
+    for factory_cls in (CountyFactory, CountyYearSettingFactory, PropertyFactory, SaleFactory):
+        factory_cls._meta.sqlalchemy_session = db_session
+
+    return type("Factories", (), {
+        "County": CountyFactory,
+        "CountyYearSetting": CountyYearSettingFactory,
+        "Property": PropertyFactory,
+        "Sale": SaleFactory,
+    })
+
+
+@pytest.fixture
 def sample_address_strings():
     return [
         "106 Overhill Ave, Philadelphia, PA 19116",
         "106 OVERHILL AVENUE PHILADELPHIA PA 19116",
         "106 overhill ave philadelphia pennsylvania",
     ]
-
-@pytest.fixture
-def factories(db_session):
-    from tests.factories import CountyFactory, CountyYearSettingFactory
-
-    CountyFactory._meta.sqlalchemy_session = db_session
-    CountyYearSettingFactory._meta.sqlalchemy_session = db_session
-
-    return type("Factories", (), {
-        "County": CountyFactory,
-        "CountyYearSetting": CountyYearSettingFactory,
-    })

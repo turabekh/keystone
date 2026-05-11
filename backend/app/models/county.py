@@ -18,9 +18,11 @@ class County(BaseModel):
     filing_office_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     year_settings: Mapped[list["CountyYearSetting"]] = relationship(
-        back_populates="county",
-        cascade="all, delete-orphan",
-    )
+            back_populates="county",
+            cascade="all, delete-orphan",
+        )
+
+    properties: Mapped[list["Property"]] = relationship(back_populates="county")
 
     __table_args__ = (
         UniqueConstraint("state", "slug", name="uq_counties_state_slug"),
