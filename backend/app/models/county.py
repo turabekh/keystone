@@ -3,6 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from uuid import UUID
 
 from app.models.base import BaseModel
+from decimal import Decimal
 
 
 class County(BaseModel):
@@ -45,7 +46,10 @@ class CountyYearSetting(BaseModel):
     appeal_deadline: Mapped[str | None] = mapped_column(String(50), nullable=True)
     last_reassessment_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-
+    clr_ratio: Mapped[Decimal | None] = mapped_column(Numeric(8, 4), nullable=True)
+    effective_tax_rate: Mapped[Decimal | None] = mapped_column(Numeric(8, 6), nullable=True)
+    clr_sample_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    clr_source_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
     county: Mapped["County"] = relationship(back_populates="year_settings")
 
     __table_args__ = (
