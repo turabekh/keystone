@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     db_echo: bool = Field(default=False)
 
     data_cache_dir: Path = Field(default=Path("var/data"))
-    http_timeout_seconds: int = Field(default=60)
+    http_timeout_seconds: int = Field(default=1000)
 
     @computed_field
     @property
