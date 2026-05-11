@@ -51,3 +51,18 @@ def get_property(property_id: UUID, db: Session = Depends(get_db)):
     if prop is None:
         raise HTTPException(status_code=404, detail="Property not found")
     return prop
+
+
+from app.schemas.valuation import ValuationRead
+from app.services.comp_engine import value_property
+
+
+@router.get("/{property_id}/valuation", response_model=ValuationRead)
+def get_property_valuation(property_id: UUID, db: Session = Depends(get_db)):
+    repo = PropertyRepository(db)
+    prop = repo.get_by_id(property_id)
+    if prop is None:
+        raise HTTPException(status_code=404, detail="Property not found")
+    
+    result = value_property(db, property_id)
+    return result

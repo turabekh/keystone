@@ -48,6 +48,7 @@ _UPSERT_COLUMNS = (
     "source_id",
     "payload_hash",
     "raw_data",
+    "hundred_block",
 )
 
 

@@ -140,12 +140,18 @@ def _build_payload(row: dict[str, str], county_id: str) -> dict[str, Any]:
     if sale_price is not None and sale_price < 0:
         sale_price = None
 
+    street_number_raw = _clean(row.get("house_number"))
+    hundred_block = None
+    if street_number_raw and street_number_raw.isdigit():
+        hundred_block = (int(street_number_raw) // 100) * 100
+
     payload: dict[str, Any] = {
         "county_id": county_id,
         "parcel_id": _clean(row.get("parcel_number")),
         "address_full": location,
         "address_normalized": _normalize_address(location),
-        "street_number": _clean(row.get("house_number")),
+        "street_number": street_number_raw,
+        "hundred_block": hundred_block,
         "street_direction": direction,
         "street_name": _clean(row.get("street_name")),
         "street_suffix": _clean(row.get("street_designation")),
