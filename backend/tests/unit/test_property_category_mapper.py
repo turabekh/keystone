@@ -69,6 +69,16 @@ def test_mixed_use_variants(description, expected):
     ("WAREHOUSE LIGHT INDUSTRIAL", PropertyCategory.COMMERCIAL),
     ("RESTAURANT", PropertyCategory.COMMERCIAL),
     ("AUTO REPAIR SHOP", PropertyCategory.COMMERCIAL),
+    ("OFF BLD N/COM W/PKG MASON", PropertyCategory.COMMERCIAL),
+    ("OFF BLD COM NO GAR MASON", PropertyCategory.COMMERCIAL),
+    ("OFF BLD W/COM GAR MASONRY", PropertyCategory.COMMERCIAL),
+    ("SCHOOL 5 STY MASONRY", PropertyCategory.COMMERCIAL),
+    ("HEALTH FAC HOSP MAS+OTH", PropertyCategory.COMMERCIAL),
+    ("HEALTH FAC CLINIC MASONRY", PropertyCategory.COMMERCIAL),
+    ("REST'RNT W/BAR MASONRY", PropertyCategory.COMMERCIAL),
+    ("PUB UTIL 2 STY METAL", PropertyCategory.COMMERCIAL),
+    ("AMUSE HALL MASONRY", PropertyCategory.COMMERCIAL),
+    ("AMUSE THEATRE MASONRY+OTH", PropertyCategory.COMMERCIAL),
 ])
 def test_commercial_variants(description, expected):
     assert map_building_code_description(description) == expected

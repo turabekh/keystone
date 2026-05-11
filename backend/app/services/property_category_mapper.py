@@ -48,6 +48,8 @@ _MIXED_USE_KEYWORDS = (
 )
 
 _COMMERCIAL_KEYWORDS = (
+    "OFF BLD",
+    "OFF BUILDING",
     "STORE",
     "OFFICE",
     "WAREHOUSE",
@@ -56,6 +58,7 @@ _COMMERCIAL_KEYWORDS = (
     "COMMERCIAL",
     "RETAIL",
     "RESTAURANT",
+    "REST'RNT",
     "HOTEL",
     "MOTEL",
     "GAS STATION",
@@ -63,6 +66,12 @@ _COMMERCIAL_KEYWORDS = (
     "AUTO",
     "BANK",
     "SHOPPING",
+    "SCHOOL",
+    "HEALTH FAC",
+    "HOSPITAL",
+    "CLINIC",
+    "PUB UTIL",
+    "AMUSE",
 )
 
 _VACANT_KEYWORDS = (
