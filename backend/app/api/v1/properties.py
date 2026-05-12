@@ -8,6 +8,10 @@ from app.repositories.property import PropertyRepository
 from app.schemas.property import PropertyDetail, PropertyLookupResult
 from app.schemas.uniformity import UniformityRead
 from app.services.uniformity_engine import analyze_uniformity
+from app.schemas.recommendation import RecommendationRead
+from app.services.recommendation_engine import recommend_appeal
+
+
 
 
 router = APIRouter(prefix="/properties", tags=["properties"])
@@ -78,4 +82,15 @@ def get_property_uniformity(property_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Property not found")
     
     result = analyze_uniformity(db, property_id)
+    return result
+
+
+@router.get("/{property_id}/recommendation", response_model=RecommendationRead)
+def get_property_recommendation(property_id: UUID, db: Session = Depends(get_db)):
+    repo = PropertyRepository(db)
+    prop = repo.get_by_id(property_id)
+    if prop is None:
+        raise HTTPException(status_code=404, detail="Property not found")
+    
+    result = recommend_appeal(db, property_id)
     return result

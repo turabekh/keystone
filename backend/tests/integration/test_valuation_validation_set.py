@@ -120,3 +120,54 @@ def test_uniformity_returns_insufficient_when_few_sales(client):
     assert response.status_code == 200
     data = response.json()
     assert data["signal"] == "insufficient_data"
+
+
+@pytest.mark.integration
+def test_1204_master_recommendation_appeal(client):
+    """1204 MASTER: moderate appeal case with meaningful savings."""
+    prop = _lookup_first(client, "1204 master")
+    response = client.get(f"/api/v1/properties/{prop['id']}/recommendation")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["recommendation"] in {"appeal", "appeal_strongly"}
+    assert data["annual_tax_savings"] >= 500
+    assert data["counter_appeal_risk"] == "low"
+
+
+@pytest.mark.integration
+def test_106_overhill_recommendation_no_appeal(client):
+    """106 OVERHILL: under-assessed; engine must protect customer from bad appeal."""
+    prop = _lookup_first(client, "106 overhill")
+    response = client.get(f"/api/v1/properties/{prop['id']}/recommendation")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["recommendation"] == "do_not_appeal"
+
+
+@pytest.mark.integration
+def test_7000_emlen_recommendation_appeal_strongly(client):
+    """7000 EMLEN: canonical strong-case property — 42% uniformity deviation, low counter-appeal risk."""
+    prop = _lookup_first(client, "7000 emlen")
+    response = client.get(f"/api/v1/properties/{prop['id']}/recommendation")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["recommendation"] == "appeal_strongly"
+    assert data["primary_argument"] == "uniformity"
+    assert data["annual_tax_savings"] >= 2000
+    assert data["counter_appeal_risk"] == "low"
+
+
+@pytest.mark.integration
+def test_8200_germantown_condo_recommendation_protected(client):
+    """8200 GERMANTOWN condo: comp engine has known gaps for high-end condos.
+    
+    Even though our valuation suggests massive savings, the engine MUST flag this as
+    high counter-appeal risk and refuse to recommend appeal. Customer safety is
+    non-negotiable — bad recommendations cost real money in counter-appealed taxes."""
+    prop = _lookup_first(client, "8200 germantown")
+    response = client.get(f"/api/v1/properties/{prop['id']}/recommendation")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["recommendation"] == "do_not_appeal"
+    assert data["counter_appeal_risk"] == "high"
+    assert data["annual_tax_savings"] in {0, None}
