@@ -107,3 +107,75 @@ cases:
       is ABOVE assessment ($226K) — no market-value argument. Uniformity returns
       insufficient_data (only 4 multi-family sales in tract). No defensible appeal target.
       Correctly recommended DO_NOT_APPEAL.
+  - test_id: validation_006_fishtown_rowhouse_protected_by_threshold
+    address_query: "2025 cumberland"
+    expected_parcel_id: "314028200"
+    expected_address_contains: "2025 E CUMBERLAND"
+    expected_recommendation: "do_not_appeal"
+    expected_counter_appeal_risk: "high"
+    expected_annual_savings:
+      min: 0
+      max: 0
+    expected_valuation_confidence: "low"
+    tags: [fishtown, rowhouse, no_recent_sale, threshold_protection, conservative_decline]
+    notes: |
+      Fishtown rowhouse, 2000 block of E Cumberland. 1875-vintage, 1,075 sqft, no
+      recent sale, assessed at $304K. Comp engine finds 4 same-block tight-size
+      sales in a narrow $139-$151/sqft band suggesting market value ~$159K
+      (48% reduction from assessment).
+      
+      The proposed 48% reduction crosses the 40% threshold for the symmetric
+      counter-appeal protection rule. Combined with LOW comp confidence (only 4
+      total comps), the engine flags HIGH counter-appeal risk and refuses to
+      recommend appeal.
+      
+      This may be over-cautious — the comp data is genuinely strong by appraisal
+      standards — but reflects v1's conservative posture. If we widen confidence
+      to recognize quality-over-quantity (4 same-block tight comps = HIGH), or
+      raise the threshold to 50%+, this case would flip to APPEAL.
+      
+      Locked in as "engine refused, possibly too cautious." Re-examine after
+      gathering 5-10 more Fishtown/Brewerytown/Point Breeze cases to see whether
+      this protection rule fires too often.
+      
+  - test_id: validation_007_fishtown_rowhouse_appeal_strongly
+    address_query: "2020 cumberland"
+    expected_parcel_id: "314005700"
+    expected_address_contains: "2020 E CUMBERLAND"
+    expected_recommendation: "appeal_strongly"
+    expected_counter_appeal_risk: "low"
+    expected_annual_savings:
+      min: 1300
+      max: 2200
+    tags: [fishtown, rowhouse, no_recent_sale, just_under_threshold]
+    notes: |
+      Fishtown rowhouse two doors from validation_006. Assessment $313K,
+      comp engine produces $198K (37% reduction). Falls JUST UNDER the 40%
+      threshold, so the symmetric counter-appeal protection does NOT fire.
+      Recommendation: APPEAL_STRONGLY.
+      
+      Compare against validation_006 — same comp pool, different property,
+      different recommendation. This pair documents how the 40% threshold
+      creates a discontinuity. If the threshold logic changes, both cases
+      will move together and we should re-examine their relative recommendations.
+  
+  - test_id: validation_008_fishtown_rowhouse_under_assessed
+    address_query: "2021 cumberland"
+    expected_parcel_id: "314028000"
+    expected_address_contains: "2021 E CUMBERLAND"
+    expected_recommendation: "do_not_appeal"
+    expected_argument: "none"
+    expected_counter_appeal_risk: "low"
+    expected_annual_savings:
+      min: 0
+      max: 0
+    tags: [fishtown, rowhouse, under_assessed, customer_protection]
+    notes: |
+      Fishtown rowhouse on the same block as validation_006 and _007.
+      Assessment $245K, comp engine produces $260K (estimate ABOVE assessment).
+      No market-value argument exists; uniformity is also no-case.
+      Correctly recommends DO_NOT_APPEAL.
+      
+      This is the third Cumberland case demonstrating per-property differentiation.
+      Same comp pool, but this property's lower assessment puts it BELOW the market
+      estimate, so it's already at/below where it should be.
