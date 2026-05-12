@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 MAX_MONTHS_BACK = 24
 MIN_COMPS_FOR_TIGHT_SCOPE = 8
 MAX_CANDIDATES = 200
+MIN_COMPS_FOR_TIGHT_SCOPE_TIGHT = 3   # Stop at same-block if we have 3+
+MIN_COMPS_FOR_TIGHT_SCOPE_WIDE = 5    # Stop at same-tract if we have 5+ total
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,36 +52,25 @@ def find_candidates(
 ) -> list[CompCandidate]:
     earliest_sale_date = _date_n_months_before(as_of, max_months_back)
 
-    candidates = _query_at_scope(
-        session,
-        subject,
-        earliest_sale_date,
-        CompGeographicScope.SAME_BLOCK,
+    block_candidates = _query_at_scope(
+        session, subject, earliest_sale_date, CompGeographicScope.SAME_BLOCK,
     )
-    if len(candidates) >= MIN_COMPS_FOR_TIGHT_SCOPE:
-        return candidates
+    if len(block_candidates) >= MIN_COMPS_FOR_TIGHT_SCOPE_TIGHT:
+        return block_candidates
 
     tract_candidates = _query_at_scope(
-        session,
-        subject,
-        earliest_sale_date,
-        CompGeographicScope.SAME_CENSUS_TRACT,
+        session, subject, earliest_sale_date, CompGeographicScope.SAME_CENSUS_TRACT,
     )
-    seen = {c.property_id for c in candidates}
-    candidates.extend(c for c in tract_candidates if c.property_id not in seen)
-    if len(candidates) >= MIN_COMPS_FOR_TIGHT_SCOPE:
-        return candidates
+    seen = {c.property_id for c in block_candidates}
+    combined = block_candidates + [c for c in tract_candidates if c.property_id not in seen]
+    if len(combined) >= MIN_COMPS_FOR_TIGHT_SCOPE_WIDE:
+        return combined
 
     ward_candidates = _query_at_scope(
-        session,
-        subject,
-        earliest_sale_date,
-        CompGeographicScope.SAME_WARD,
+        session, subject, earliest_sale_date, CompGeographicScope.SAME_WARD,
     )
-    seen = {c.property_id for c in candidates}
-    candidates.extend(c for c in ward_candidates if c.property_id not in seen)
-    return candidates
-
+    seen = {c.property_id for c in combined}
+    return combined + [c for c in ward_candidates if c.property_id not in seen]
 
 def _query_at_scope(
     session: Session,
@@ -90,6 +81,21 @@ def _query_at_scope(
     geo_filter = _geographic_filter(subject, scope)
     if geo_filter is None:
         return []
+
+    where_clauses = [
+        Property.id != subject.property_id,
+        Property.county_id == subject.county_id,
+        Property.property_category == subject.property_category,
+        Sale.is_arms_length.is_(True),
+        Sale.sale_date >= earliest_sale_date,
+        geo_filter,
+    ]
+
+    if subject.living_area is not None and subject.living_area > 0:
+        # Only consider comps within ±35% of subject living area
+        min_area = int(subject.living_area * 0.65)
+        max_area = int(subject.living_area * 1.35)
+        where_clauses.append(Property.square_feet_living.between(min_area, max_area))
 
     stmt = (
         select(
@@ -111,14 +117,7 @@ def _query_at_scope(
             Sale.sale_price,
         )
         .join(Sale, Sale.property_id == Property.id)
-        .where(
-            Property.id != subject.property_id,
-            Property.county_id == subject.county_id,
-            Property.property_category == subject.property_category,
-            Sale.is_arms_length.is_(True),
-            Sale.sale_date >= earliest_sale_date,
-            geo_filter,
-        )
+        .where(*where_clauses)
         .order_by(Sale.sale_date.desc())
         .limit(MAX_CANDIDATES)
     )

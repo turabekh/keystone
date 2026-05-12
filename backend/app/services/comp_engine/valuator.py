@@ -14,6 +14,7 @@ from app.services.comp_engine.types import (
 )
 
 from app.services.comp_engine.types import CompGeographicScope
+from app.models.property import PropertyCategory
 
 
 PHILLY_ANNUAL_APPRECIATION = 0.016
@@ -68,6 +69,27 @@ def value_property(
     as_of = as_of or date.today()
 
     subject = load_subject(session, property_id)
+
+    if subject is not None and subject.property_category in {
+        PropertyCategory.COMMERCIAL,
+        PropertyCategory.MIXED_USE,
+        PropertyCategory.OTHER,
+    }:
+        return ValuationResult(
+            subject_property_id=property_id,
+            point_estimate=None,
+            low_estimate=None,
+            high_estimate=None,
+            confidence=ValuationConfidence.INSUFFICIENT_DATA,
+            comp_count=0,
+            notes=(
+                f"Subject is a {subject.property_category.value} property; "
+                f"comp-based valuation is not supported in v1. "
+                f"Commercial and mixed-use appeals require manual appraisal.",
+            ),
+            calculated_at=as_of,
+        )
+    
     if subject is None:
         return ValuationResult(
             subject_property_id=property_id,
@@ -245,4 +267,10 @@ def _build_notes(comps: list[CompUsed], confidence: ValuationConfidence, outlier
         notes.append("Confidence is low; consider this estimate a starting point only")
     elif confidence == ValuationConfidence.HIGH:
         notes.append("High confidence based on tight geographic and physical match")
+
+    notes.append(
+        "Estimate uses median price-per-sqft from comparable recorded sales. "
+        "Actual market value may vary ±15% based on condition, school district, "
+        "and other factors. For tax appeal purposes, this estimate reflects deed-recorded sales."
+    )
     return tuple(notes)
