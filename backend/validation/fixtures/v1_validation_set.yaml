@@ -1,0 +1,109 @@
+# Keystone Engine Validation Set v1
+#
+# Each case represents a manually-judged expected outcome for a Philadelphia property.
+# Engine output that diverges from these expectations is a regression that needs
+# explanation. Updating these expectations requires deliberate human review.
+#
+# Tolerance ranges (min/max) reflect natural noise in median-based estimates;
+# they are NOT a license to drift. Tighten them as the engine stabilizes.
+
+cases:
+  # ============================================================
+  # ANCHOR CASES — original validation set, deeply understood
+  # ============================================================
+  
+  - test_id: anchor_001_brewerytown_rowhouse
+    address_query: "1204 master"
+    expected_parcel_id: "141463300"
+    expected_address_contains: "1204 MASTER"
+    expected_recommendation: "appeal"
+    expected_argument: "market_value"
+    expected_counter_appeal_risk: "low"
+    expected_annual_savings:
+      min: 800
+      max: 1500
+    expected_valuation_confidence: "medium"
+    expected_point_estimate:
+      min: 220000
+      max: 280000
+    expected_comp_count_min: 5
+    expected_uniformity_signal: "moderate_case"
+    tags: [anchor, rowhouse, brewerytown, recent_sale, market_value_argument]
+    notes: |
+      Brewerytown rowhouse. Subject sold Feb 2026 for $251K, well below the
+      $319K assessment. Recent sale anchors the market-value argument. Should
+      be a clean APPEAL with $1K/year savings. Counter-appeal risk LOW because
+      the recent sale is at or below the appeal target.
+  
+  - test_id: anchor_002_ne_philly_single_family_under_assessed
+    address_query: "106 overhill"
+    expected_parcel_id: "583044905"
+    expected_address_contains: "106 OVERHILL"
+    expected_recommendation: "do_not_appeal"
+    expected_argument: "none"
+    expected_counter_appeal_risk: "low"
+    expected_valuation_confidence: "medium"
+    expected_point_estimate:
+      min: 550000
+      max: 680000
+    expected_uniformity_signal: "no_case"
+    tags: [anchor, single_family, ne_philly, somerton, under_assessed, customer_protection]
+    notes: |
+      NE Philly single-family. OPA records 2,488 sqft (Redfin says 2,938 incl. basement).
+      Comp engine produces ~$613K based on OPA's size, neighborhood median ASR 0.91 vs
+      subject 0.76. Subject is under-assessed by both market and uniformity arguments —
+      customer correctly told NOT to appeal. This is a customer-protection regression test.
+
+  - test_id: anchor_003_mt_airy_strong_uniformity
+    address_query: "7000 emlen"
+    expected_parcel_id: "223224310"
+    expected_address_contains: "7000 EMLEN"
+    expected_recommendation: "appeal_strongly"
+    expected_argument: "uniformity"
+    expected_counter_appeal_risk: "low"
+    expected_annual_savings:
+      min: 2000
+      max: 4000
+    expected_valuation_confidence: "insufficient_data"
+    expected_uniformity_signal: "strong_case"
+    tags: [anchor, single_family, mt_airy, strong_uniformity, comp_engine_refused]
+    notes: |
+      Mt Airy single-family. Subject ASR 1.26, neighborhood median ASR 0.89 = 42% over.
+      Comp engine correctly REFUSES (ward-fallback noise, $76-$530/sqft variance);
+      uniformity engine carries the recommendation alone. Demonstrates dual-engine
+      design: when one engine declines, the other still produces a defensible answer.
+  
+  - test_id: anchor_004_chestnut_hill_condo_protected
+    address_query: "8200 germantown"
+    expected_parcel_id: "888096010"
+    expected_address_contains: "8200 GERMANTOWN"
+    expected_recommendation: "do_not_appeal"
+    expected_counter_appeal_risk: "high"
+    expected_annual_savings:
+      min: 0
+      max: 0
+    tags: [anchor, condo, chestnut_hill, customer_protection, high_counter_appeal_risk]
+    notes: |
+      Luxury condo unit at 8200 Germantown (One West building). Comp engine produces
+      ~$386K based on smaller condos in nearby buildings, but actual unit values are
+      $1.4M+ based on same-building sales. Counter-appeal risk classifier MUST flag
+      this as HIGH (condo + no recent sale + >40% reduction = high risk).
+      
+      THIS IS THE CUSTOMER-SAFETY REGRESSION LOCK. If this test fails, we are recommending
+      an appeal that would result in a counter-appeal raising the customer's assessment
+      to ~$1.4M and costing them thousands per year. Do not weaken this assertion without
+      manual verification that the underlying issue is fixed.
+
+  - test_id: anchor_005_multi_family_insufficient_data
+    address_query: "1500 walnut"
+    expected_parcel_id: "102148300"
+    expected_address_contains: "1500 E WALNUT"
+    expected_recommendation: "do_not_appeal"
+    expected_argument: "none"
+    expected_counter_appeal_risk: "low"
+    tags: [anchor, multi_family, ne_philly, insufficient_data]
+    notes: |
+      Multi-family on E Walnut Ln in NE Philly. Comp engine produces $261K but estimate
+      is ABOVE assessment ($226K) — no market-value argument. Uniformity returns
+      insufficient_data (only 4 multi-family sales in tract). No defensible appeal target.
+      Correctly recommended DO_NOT_APPEAL.

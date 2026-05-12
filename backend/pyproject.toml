@@ -16,6 +16,7 @@ dependencies = [
     "httpx>=0.28.0",
     "structlog>=24.4.0",
     "click>=8.1.7",
+    "pyyaml>=6.0.3",
 ]
 
 [dependency-groups]
