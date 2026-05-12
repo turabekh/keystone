@@ -114,6 +114,7 @@ def recommend_appeal(
     counter_appeal_risk = _assess_counter_appeal_risk(
         session, property_id, current_assessment, appeal_target, as_of,
         subject_category=subject.property_category,
+        valuation=valuation,
     )
     
     recommendation = _classify_recommendation(
@@ -228,7 +229,7 @@ def _assess_counter_appeal_risk(
     subject_category: PropertyCategory | None = None,
     valuation = None,
 ) -> CounterAppealRisk:
-    # First check: subject's own recent sale
+    # First check: subject's own recent sale anchors our market reality.
     cutoff = date(
         as_of.year - (COUNTER_APPEAL_RECENT_SALE_MONTHS // 12),
         as_of.month,
@@ -251,25 +252,22 @@ def _assess_counter_appeal_risk(
         if recent_sale.sale_price >= appeal_target * COUNTER_APPEAL_MEDIUM_RATIO:
             return CounterAppealRisk.MEDIUM
         return CounterAppealRisk.LOW
-    
-    # Second check: huge proposed reduction on property type with known comp engine gaps
-    # Condos and multi-family have known coverage gaps in v1; if we're proposing >40%
-    # assessment reduction on these, default to HIGH counter-appeal risk.
-    if (
-        subject_category in {PropertyCategory.CONDO, PropertyCategory.MULTI_FAMILY}
-        and current_assessment > 0
+
+    # Second check: no recent sale to anchor market reality.
+    # If we're proposing a >40% assessment reduction, require HIGH-confidence
+    # comp evidence to trust the appeal target. Otherwise default to HIGH risk.
+    large_reduction = (
+        current_assessment > 0
         and appeal_target < current_assessment * 0.6
-    ):
-        return CounterAppealRisk.HIGH
-    
-    return CounterAppealRisk.LOW
-    
-    # Second check: if comp engine flagged condo-specific concerns, treat appeal target as risky
-    if valuation is not None:
-        for note in valuation.notes:
-            if "condo" in note.lower() and ("appraisal" in note.lower() or "approximate" in note.lower()):
-                return CounterAppealRisk.HIGH
-    
+    )
+    if large_reduction:
+        comp_confidence_is_high = (
+            valuation is not None
+            and valuation.confidence == ValuationConfidence.HIGH
+        )
+        if not comp_confidence_is_high:
+            return CounterAppealRisk.HIGH
+
     return CounterAppealRisk.LOW
 
 
@@ -380,9 +378,9 @@ def _build_reasoning(
     
     if counter_appeal_risk == CounterAppealRisk.HIGH:
         reasoning.append(
-            "HIGH counter-appeal risk: appeal target is significantly below "
-            "current assessment, and v1 lacks confidence for this property type. "
-            "School district may successfully counter-appeal upward. Not recommended."
+            "HIGH counter-appeal risk: appeal target is significantly below current assessment, "
+            "and we lack high-confidence evidence (either a recent subject sale or strong same-block comps) "
+            "to defend that target. School district may successfully counter-appeal upward. Not recommended."
         )
     elif counter_appeal_risk == CounterAppealRisk.MEDIUM:
         reasoning.append(
