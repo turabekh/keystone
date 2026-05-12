@@ -137,7 +137,7 @@ cases:
       Locked in as "engine refused, possibly too cautious." Re-examine after
       gathering 5-10 more Fishtown/Brewerytown/Point Breeze cases to see whether
       this protection rule fires too often.
-      
+
   - test_id: validation_007_fishtown_rowhouse_appeal_strongly
     address_query: "2020 cumberland"
     expected_parcel_id: "314005700"
@@ -179,3 +179,37 @@ cases:
       This is the third Cumberland case demonstrating per-property differentiation.
       Same comp pool, but this property's lower assessment puts it BELOW the market
       estimate, so it's already at/below where it should be.
+    
+  - test_id: validation_009_point_breeze_rowhouse_under_assessed
+    address_query: "1600 s 19th"
+    expected_parcel_id: "871549210"
+    expected_address_contains: "1600 S 19TH"
+    expected_recommendation: "do_not_appeal"
+    expected_argument: "none"
+    expected_counter_appeal_risk: "low"
+    expected_annual_savings:
+      min: 0
+      max: 0
+    expected_valuation_confidence: "medium"
+    expected_point_estimate:
+      min: 400000
+      max: 600000
+    expected_uniformity_signal: "no_case"
+    tags: [point_breeze, rowhouse, under_assessed, customer_protection, no_arms_length_sale]
+    notes: |
+      Point Breeze edge rowhouse at 1600 S 19th St, 19145 ZIP. 2,106 sqft, 1925
+      vintage. Assessment $241K. Has a $1 sale recorded in Aug 2024 (correctly
+      flagged not arms-length and excluded from comp pool).
+      
+      Comp engine produces ~$512K based on 10 same-tract tight-size comps with
+      heterogeneous pricing ($123-$279/sqft). The wide ppsf range likely reflects
+      mixed renovation status in this gentrifying neighborhood, but the median
+      lands well above the assessment.
+      
+      Subject ASR is 0.47 vs neighborhood median 0.98 — homeowner is assessed
+      at half what their neighbors are paying relative to market. Strong customer
+      protection case: engine correctly tells homeowner NOT to appeal because
+      they're already substantially under-assessed.
+      
+      Compare to validation_002 (Overhill, also under-assessed). Both encode the
+      same protective behavior in different neighborhoods and property categories.
