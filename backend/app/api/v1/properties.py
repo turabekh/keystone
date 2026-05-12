@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.repositories.property import PropertyRepository
 from app.schemas.property import PropertyDetail, PropertyLookupResult
+from app.schemas.uniformity import UniformityRead
+from app.services.uniformity_engine import analyze_uniformity
 
 
 router = APIRouter(prefix="/properties", tags=["properties"])
@@ -65,4 +67,15 @@ def get_property_valuation(property_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Property not found")
     
     result = value_property(db, property_id)
+    return result
+
+
+@router.get("/{property_id}/uniformity", response_model=UniformityRead)
+def get_property_uniformity(property_id: UUID, db: Session = Depends(get_db)):
+    repo = PropertyRepository(db)
+    prop = repo.get_by_id(property_id)
+    if prop is None:
+        raise HTTPException(status_code=404, detail="Property not found")
+    
+    result = analyze_uniformity(db, property_id)
     return result

@@ -69,3 +69,54 @@ def test_commercial_property_declines_in_v1(client):
     data = response.json()
     assert data["confidence"] == "insufficient_data"
     assert any("commercial" in n.lower() or "mixed-use" in n.lower() for n in data["notes"])
+
+
+@pytest.mark.integration
+def test_1204_master_uniformity_moderate_case(client):
+    """1204 MASTER ST: 10% over-assessed vs neighborhood, moderate appeal case."""
+    prop = _lookup_first(client, "1204 master")
+    response = client.get(f"/api/v1/properties/{prop['id']}/uniformity")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["signal"] in {"moderate_case", "strong_case"}
+    assert data["subject_asr"] > 1.2
+    assert data["neighborhood_sample_size"] >= 8
+
+
+@pytest.mark.integration
+def test_106_overhill_uniformity_no_case(client):
+    """106 OVERHILL: under-assessed vs neighborhood — should not appeal."""
+    prop = _lookup_first(client, "106 overhill")
+    response = client.get(f"/api/v1/properties/{prop['id']}/uniformity")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["signal"] == "no_case"
+    assert data["subject_asr"] < 0.9
+
+
+@pytest.mark.integration
+def test_7000_emlen_uniformity_strong_case(client):
+    """7000 EMLEN ST: 42% over-assessed vs neighborhood — strong appeal case.
+    
+    This is the canonical 'strong case' validation property. If this regresses
+    below 'strong_case' signal, the uniformity engine has changed materially."""
+    prop = _lookup_first(client, "7000 emlen")
+    response = client.get(f"/api/v1/properties/{prop['id']}/uniformity")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["signal"] == "strong_case"
+    assert data["subject_asr"] > 1.2
+    assert data["neighborhood_median_asr"] < 1.0
+    assert data["deviation_from_neighborhood"] > 0.30
+
+
+@pytest.mark.integration
+def test_uniformity_returns_insufficient_when_few_sales(client):
+    """Multi-family in 19138 has too few sales — engine should decline rather than guess."""
+    prop = _lookup_first(client, "1500 walnut")
+    if prop is None or prop["property_category"] != "multi_family":
+        pytest.skip("Test requires multi-family property in DB")
+    response = client.get(f"/api/v1/properties/{prop['id']}/uniformity")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["signal"] == "insufficient_data"
