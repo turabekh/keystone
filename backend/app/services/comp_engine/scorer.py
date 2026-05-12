@@ -21,7 +21,7 @@ def score_candidate(
 ) -> float:
     geo = _SCOPE_WEIGHT[candidate.geographic_scope]
     
-    living = _proximity_score(subject.living_area, candidate.living_area, tolerance_pct=0.15)
+    living = _proximity_score(subject.living_area, candidate.living_area, tolerance_pct=0.20)
     lot = _proximity_score(subject.lot_area, candidate.lot_area, tolerance_pct=0.40)
     age = _age_score(subject.year_built, candidate.year_built, tolerance_years=20)
     beds = _exact_score_with_tolerance(subject.bedrooms, candidate.bedrooms, tolerance=1)
@@ -33,12 +33,12 @@ def score_candidate(
     recency = _recency_score(candidate.sale_date, as_of, half_life_months=18)
     
     physical = (
-        0.50 * living
-        + 0.05 * lot
-        + 0.10 * age
+        0.30 * living
+        + 0.10 * lot
+        + 0.15 * age
         + 0.10 * beds
         + 0.10 * baths
-        + 0.15 * recency
+        + 0.25 * recency
     )
     
     return geo * physical

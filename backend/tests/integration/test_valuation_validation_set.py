@@ -171,3 +171,66 @@ def test_8200_germantown_condo_recommendation_protected(client):
     assert data["recommendation"] == "do_not_appeal"
     assert data["counter_appeal_risk"] == "high"
     assert data["annual_tax_savings"] in {0, None}
+
+
+@pytest.mark.integration
+def test_1204_master_size_matched_valuation(client):
+    """1204 MASTER: rowhouse, tight-band comps, around $241K post-fix."""
+    prop = _lookup_first(client, "1204 master")
+    response = client.get(f"/api/v1/properties/{prop['id']}/valuation")
+    data = response.json()
+    assert 220_000 <= data["point_estimate"] <= 280_000
+    tight_comps = [c for c in data["comps"] if c["size_match"] == "tight"]
+    assert len(tight_comps) >= 5
+
+
+@pytest.mark.integration
+def test_106_overhill_size_matched_valuation(client):
+    """106 OVERHILL AVE: NE Philly single-family.
+    
+    OPA reports 2,488 sqft; Redfin reports 2,938. We use OPA's number which is
+    the BRT's source of truth. With size-bracketed comps from same census tract,
+    estimate lands around $613K.
+    
+    Important: this estimate is HIGHER than the assessment ($471K), confirming
+    the property is under-assessed and the engine correctly recommends DO_NOT_APPEAL."""
+    prop = _lookup_first(client, "106 overhill")
+    response = client.get(f"/api/v1/properties/{prop['id']}/valuation")
+    data = response.json()
+    assert 550_000 <= data["point_estimate"] <= 680_000
+    tight_comps = [c for c in data["comps"] if c["size_match"] == "tight"]
+    assert len(tight_comps) >= 5
+
+
+@pytest.mark.integration
+def test_7000_emlen_ward_noise_declined(client):
+    """7000 EMLEN: ward-fallback comp pool spans $76-$530/sqft.
+    
+    Engine MUST refuse to produce a comp-based estimate when same-ward comps
+    show extreme variance. The uniformity engine still produces a valid signal,
+    and the recommendation should remain APPEAL_STRONGLY based on uniformity alone."""
+    prop = _lookup_first(client, "7000 emlen")
+    response = client.get(f"/api/v1/properties/{prop['id']}/valuation")
+    val_data = response.json()
+    assert val_data["confidence"] == "insufficient_data"
+    assert val_data["point_estimate"] is None
+    
+    response = client.get(f"/api/v1/properties/{prop['id']}/recommendation")
+    rec_data = response.json()
+    assert rec_data["recommendation"] == "appeal_strongly"
+    assert rec_data["primary_argument"] == "uniformity"
+    assert rec_data["annual_tax_savings"] >= 2000
+
+
+@pytest.mark.integration
+def test_8200_germantown_condo_protected(client):
+    """8200 GERMANTOWN: condo with known coverage gaps.
+    
+    Even after the size-bracketed comp engine produces a number, the
+    recommendation MUST be DO_NOT_APPEAL due to high counter-appeal risk
+    for condos with no recent subject sale."""
+    prop = _lookup_first(client, "8200 germantown")
+    response = client.get(f"/api/v1/properties/{prop['id']}/recommendation")
+    data = response.json()
+    assert data["recommendation"] == "do_not_appeal"
+    assert data["counter_appeal_risk"] == "high"

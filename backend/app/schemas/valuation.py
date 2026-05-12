@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.services.comp_engine.types import (
     CompGeographicScope,
+    CompSizeMatch,
     ValuationConfidence,
 )
 
@@ -22,6 +23,7 @@ class CompUsedRead(BaseModel):
     price_per_sqft: float | None
     similarity_score: float
     geographic_scope: CompGeographicScope
+    size_match: CompSizeMatch
     months_ago: int
 
 

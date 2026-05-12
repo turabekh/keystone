@@ -11,6 +11,7 @@ from app.services.comp_engine.types import (
     CompUsed,
     ValuationConfidence,
     ValuationResult,
+    CompSizeMatch,
 )
 
 from app.services.comp_engine.types import CompGeographicScope
@@ -156,6 +157,7 @@ def value_property(
                 price_per_sqft=round(ppsf, 2),
                 similarity_score=round(similarity, 3),
                 geographic_scope=c.geographic_scope,
+                size_match=c.size_match,
                 months_ago=months_ago,
             )
         )
@@ -190,6 +192,29 @@ def value_property(
             calculated_at=as_of,
             time_adjustment_rate_annual=annual_appreciation,
         )
+
+    # NEW: check for ward-level noise
+    ward_comps = sum(1 for c in comps_used if c.geographic_scope == CompGeographicScope.SAME_WARD)
+    ward_fraction = ward_comps / len(comps_used) if comps_used else 0.0
+    if ward_fraction >= 0.5 and len(ppsf_values) >= 4:
+        ppsf_range_ratio = max(ppsf_values) / min(ppsf_values) if min(ppsf_values) > 0 else 0
+        if ppsf_range_ratio > 3.0:
+            return ValuationResult(
+                subject_property_id=property_id,
+                point_estimate=None,
+                low_estimate=None,
+                high_estimate=None,
+                confidence=ValuationConfidence.INSUFFICIENT_DATA,
+                comp_count=len(ppsf_values),
+                notes=(
+                    f"Comp pool spans too much variance to produce a defensible estimate: "
+                    f"price-per-sqft ranges from ${min(ppsf_values):.0f} to ${max(ppsf_values):.0f}. "
+                    f"This typically means the only available comps are from a wide area with "
+                    f"heterogeneous property values. Recommendation should be based on uniformity analysis only.",
+                ),
+                calculated_at=as_of,
+                time_adjustment_rate_annual=annual_appreciation,
+            )
 
     ppsf_sorted = sorted(ppsf_values)
     median_ppsf = statistics.median(ppsf_sorted)
@@ -258,11 +283,21 @@ def _build_notes(comps: list[CompUsed], confidence: ValuationConfidence, outlier
     scope_parts = [f"{n} {scope.replace('_', ' ')}" for scope, n in by_scope.items()]
     notes.append("Comps drawn from: " + ", ".join(scope_parts))
 
+    tight_count = sum(1 for c in comps if c.size_match == CompSizeMatch.TIGHT)
+    loose_count = len(comps) - tight_count
+    if comps:
+        sizes = sorted(c.living_area for c in comps if c.living_area is not None)
+        if sizes:
+            notes.append(
+                f"Comp size range: {sizes[0]:,}–{sizes[-1]:,} sqft "
+                f"({tight_count} tight match, {loose_count} loose)"
+            )
+
     if outliers_removed > 0:
         notes.append(
             f"Removed {outliers_removed} outlier sale(s) likely representing distress transactions"
         )
-    
+
     if confidence == ValuationConfidence.LOW:
         notes.append("Confidence is low; consider this estimate a starting point only")
     elif confidence == ValuationConfidence.HIGH:

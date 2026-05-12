@@ -10,16 +10,18 @@ from sqlalchemy.orm import Session
 from app.models.property import Property, PropertyCategory
 from app.models.sale import Sale
 from app.services.comp_engine.subject import SubjectFeatures
-from app.services.comp_engine.types import CompGeographicScope
+from app.services.comp_engine.types import CompGeographicScope, CompSizeMatch
 
 
 logger = logging.getLogger(__name__)
 
 MAX_MONTHS_BACK = 24
-MIN_COMPS_FOR_TIGHT_SCOPE = 8
+MIN_COMPS_FOR_TIGHT_SCOPE_TIGHT = 3
+MIN_COMPS_FOR_TIGHT_SCOPE_WIDE = 5
 MAX_CANDIDATES = 200
-MIN_COMPS_FOR_TIGHT_SCOPE_TIGHT = 3   # Stop at same-block if we have 3+
-MIN_COMPS_FOR_TIGHT_SCOPE_WIDE = 5    # Stop at same-tract if we have 5+ total
+
+SIZE_TOLERANCE_TIGHT = 0.20
+SIZE_TOLERANCE_LOOSE = 0.35
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +43,7 @@ class CompCandidate:
     sale_date: date
     sale_price: int
     geographic_scope: CompGeographicScope
+    size_match: CompSizeMatch
 
 
 def find_candidates(
@@ -52,31 +55,49 @@ def find_candidates(
 ) -> list[CompCandidate]:
     earliest_sale_date = _date_n_months_before(as_of, max_months_back)
 
-    block_candidates = _query_at_scope(
-        session, subject, earliest_sale_date, CompGeographicScope.SAME_BLOCK,
-    )
-    if len(block_candidates) >= MIN_COMPS_FOR_TIGHT_SCOPE_TIGHT:
-        return block_candidates
+    # Try each scope in order. Within each scope, try tight size first, then loose.
+    for scope in (
+        CompGeographicScope.SAME_BLOCK,
+        CompGeographicScope.SAME_CENSUS_TRACT,
+        CompGeographicScope.SAME_WARD,
+    ):
+        tight_candidates = _query_at_scope(
+            session, subject, earliest_sale_date, scope, CompSizeMatch.TIGHT,
+        )
+        if len(tight_candidates) >= MIN_COMPS_FOR_TIGHT_SCOPE_TIGHT:
+            # Same-scope, tight size: good. Optionally add loose to fill out the comp pool.
+            if len(tight_candidates) >= MIN_COMPS_FOR_TIGHT_SCOPE_WIDE:
+                return tight_candidates
+            # Have a few tight comps; supplement with loose ones from same scope
+            loose_candidates = _query_at_scope(
+                session, subject, earliest_sale_date, scope, CompSizeMatch.LOOSE,
+            )
+            seen = {c.property_id for c in tight_candidates}
+            tight_candidates.extend(c for c in loose_candidates if c.property_id not in seen)
+            return tight_candidates
+        # Not enough tight at this scope. Try loose at this scope before falling through.
+        loose_candidates = _query_at_scope(
+            session, subject, earliest_sale_date, scope, CompSizeMatch.LOOSE,
+        )
+        combined = tight_candidates + [
+            c for c in loose_candidates if c.property_id not in {t.property_id for t in tight_candidates}
+        ]
+        if len(combined) >= MIN_COMPS_FOR_TIGHT_SCOPE_WIDE:
+            return combined
+        # Not enough even with loose. Fall through to wider geographic scope.
 
-    tract_candidates = _query_at_scope(
-        session, subject, earliest_sale_date, CompGeographicScope.SAME_CENSUS_TRACT,
+    # Even ward+loose wasn't enough. Return whatever we found at ward+loose.
+    return _query_at_scope(
+        session, subject, earliest_sale_date, CompGeographicScope.SAME_WARD, CompSizeMatch.LOOSE,
     )
-    seen = {c.property_id for c in block_candidates}
-    combined = block_candidates + [c for c in tract_candidates if c.property_id not in seen]
-    if len(combined) >= MIN_COMPS_FOR_TIGHT_SCOPE_WIDE:
-        return combined
 
-    ward_candidates = _query_at_scope(
-        session, subject, earliest_sale_date, CompGeographicScope.SAME_WARD,
-    )
-    seen = {c.property_id for c in combined}
-    return combined + [c for c in ward_candidates if c.property_id not in seen]
 
 def _query_at_scope(
     session: Session,
     subject: SubjectFeatures,
     earliest_sale_date: date,
     scope: CompGeographicScope,
+    size_match: CompSizeMatch,
 ) -> list[CompCandidate]:
     geo_filter = _geographic_filter(subject, scope)
     if geo_filter is None:
@@ -92,9 +113,12 @@ def _query_at_scope(
     ]
 
     if subject.living_area is not None and subject.living_area > 0:
-        # Only consider comps within ±35% of subject living area
-        min_area = int(subject.living_area * 0.65)
-        max_area = int(subject.living_area * 1.35)
+        tolerance = (
+            SIZE_TOLERANCE_TIGHT if size_match == CompSizeMatch.TIGHT
+            else SIZE_TOLERANCE_LOOSE
+        )
+        min_area = int(subject.living_area * (1 - tolerance))
+        max_area = int(subject.living_area * (1 + tolerance))
         where_clauses.append(Property.square_feet_living.between(min_area, max_area))
 
     stmt = (
@@ -142,6 +166,7 @@ def _query_at_scope(
             sale_date=row.sale_date,
             sale_price=row.sale_price,
             geographic_scope=scope,
+            size_match=size_match,
         )
         for row in rows
     ]

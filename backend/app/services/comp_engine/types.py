@@ -5,6 +5,10 @@ from enum import Enum
 from uuid import UUID
 
 
+class CompSizeMatch(str, Enum):
+    TIGHT = "tight"
+    LOOSE = "loose"
+    
 class ValuationConfidence(str, Enum):
     HIGH = "high"
     MEDIUM = "medium"
@@ -30,6 +34,7 @@ class CompUsed:
     price_per_sqft: float | None
     similarity_score: float
     geographic_scope: CompGeographicScope
+    size_match: CompSizeMatch
     months_ago: int
 
 
@@ -45,3 +50,4 @@ class ValuationResult:
     notes: tuple[str, ...] = field(default_factory=tuple)
     time_adjustment_rate_annual: float = 0.0
     calculated_at: date | None = None
+
